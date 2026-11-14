@@ -138,7 +138,58 @@ Desktop 對模型路由名稱有驗證，不符合其規則的名稱可能會被
 
 模型 ID 和認證方式必須依實際 Gateway 修改；在既有檔案中修改時應保留其他必要欄位。修改設定後重啟 Desktop。Desktop 的設定頁曾出現 `Couldn’t load configuration`；目前尚未確認其直接原因。離線日誌中也可能出現向 Anthropic 外部服務請求逾時，這些紀錄本身不能證明內網推論已失敗。
 
-## 6. 在可上網機器重新製作 Flatpak
+## 6. 匯入既有 Claude Code 對話
+
+Claude Code 的終端機對話通常存放在 `~/.claude/projects/`；Desktop 的側欄則使用自己的本機索引。選取工作資料夾可讓 Desktop 使用該資料夾，但不保證舊對話會自動出現在側欄。這個版本的 Desktop 提供 **Help → Troubleshooting → Import Claude Code CLI Sessions** 匯入功能。
+
+### 讓 Flatpak 唯讀舊對話
+
+Flatpak 預設無法看見主機上的 `~/.claude/projects`。若要匯入同一個 Linux 使用者的歷史，先關閉 Desktop，並以該使用者執行：
+
+```bash
+flatpak override --user \
+  --filesystem="$HOME/.claude/projects:ro" \
+  com.anthropic.ClaudeDesktop
+```
+
+`ro` 表示唯讀；這只開放對話目錄，沒有開放整個家目錄。重新開啟 Desktop 後，可使用下列命令檢查沙箱能否列出該目錄：
+
+```bash
+flatpak run --command=ls com.anthropic.ClaudeDesktop "$HOME/.claude/projects"
+```
+
+這只讓 Desktop 能讀到檔案，**不等於已經匯入成功**。唯讀也可能影響接續舊對話或寫回原始紀錄；須實際驗證。此設定不包含其他使用者的帳號或目錄。
+
+### 備份索引並使用內建匯入器
+
+匯入或其他索引變更前，先退出 Desktop 並備份目前的 Desktop 索引；若目錄不存在，請先檢查目前使用的 profile，而不是建立空索引覆寫資料：
+
+```bash
+index_dir="$HOME/.var/app/com.anthropic.ClaudeDesktop/config/Claude-3p/claude-code-sessions"
+if [ -d "$index_dir" ]; then
+  cp -a "$index_dir" "${index_dir}.backup-$(date +%Y%m%d-%H%M%S)"
+else
+  echo "找不到 Desktop 對話索引，請確認 profile"
+fi
+```
+
+重新開啟 Desktop 後，選擇你確實信任、曾用 Claude Code 工作的資料夾，再從 **Help → Troubleshooting → Import Claude Code CLI Sessions** 掃描。依匯入器提示操作，並開啟幾筆紀錄核對內容；若需要繼續對話，也要測試能否送出新訊息和保留新紀錄。
+
+Desktop 的 **Trust this workspace** 提示表示程式可能讀取、寫入或執行該資料夾的檔案，不只是讀取對話；只信任你認可的工作目錄，不要為了匯入而直接信任整個家目錄或其他使用者的專案。
+
+本次在離線機器驗證：唯讀掛載後沙箱已可列出原始對話目錄，但內建匯入器仍顯示 **No sessions to import**，並提示只處理受信任資料夾。因此目前尚未驗證批次匯入或全部對話能正常顯示；Flatpak 文件選擇器提供的路徑也可能與舊對話記錄的原始路徑不同。若仍無法匯入，保留原始對話和索引備份，再逐一確認來源工作目錄及信任狀態；不要直接覆蓋或修改原始 JSONL。
+
+若不再需要 Desktop 讀取舊對話，可對該路徑設定拒絕存取，並重新啟動 Desktop：
+
+```bash
+flatpak override --user \
+  --nofilesystem="$HOME/.claude/projects" \
+  com.anthropic.ClaudeDesktop
+```
+
+此命令會在使用者覆寫設定中加入該路徑的拒絕規則，而不是刪除原始對話。它也可能影響已匯入對話的讀取或接續，應先確認備份及需要。
+
+## 7. 在可上網機器重新製作 Flatpak
 
 現有封裝是將 **官方預先編譯的 Debian 應用樹重新封裝**，不是從 Claude Desktop 原始碼編譯。Electron2 BaseApp 已提供 zypak；應用使用 zypak wrapper 搭配 Flatpak sandbox。不要把 Desktop 預設以 root 執行，也不要為了排障隨意關閉 sandbox。
 
