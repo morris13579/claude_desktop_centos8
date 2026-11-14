@@ -1,0 +1,11 @@
+Official Linux x64 Claude Code 2.1.325, supplied separately for Claude Desktop offline testing.
+Reassemble and verify encrypted archive:
+  cat claude-code-2.1.325.zst.gpg.part* > claude-code-2.1.325.zst.gpg
+  sha256sum claude-code-2.1.325.zst.gpg
+Expected: 79b4922d1da64233cf38d309442e87da9de8a38d00de4d92f0bb51b4d1bccb85
+Decrypt with the previously agreed passphrase, then decompress with zstd:
+  gpg -o claude-2.1.325.zst -d claude-code-2.1.325.zst.gpg
+  zstd -d claude-2.1.325.zst -o claude-2.1.325
+  sha256sum claude-2.1.325
+Official manifest SHA256: 0dc4f4a9a165fc60746d7ae8489712e5fc352f1e7ad4eb22e7141bd0812eb0cf
+Do not install until the final target path is verified.
