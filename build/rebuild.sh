@@ -10,7 +10,7 @@ for dir in base-checkout unpacked claude-build app-repo package-reference; do
   [ ! -e "$dir" ] || { echo "Refusing to overwrite $dir; use a fresh directory" >&2; exit 1; }
 done
 ostree --repo="$OSTREE_REPO" checkout --user-mode "$BASE_REF" base-checkout
-mkdir -p unpacked package-reference claude-build/files claude-build/export
+mkdir -p unpacked package-reference claude-build/files
 dpkg-deb -x "$DEB_FILE" unpacked
 [ -f unpacked/usr/lib/claude-desktop/resources/app.asar ] || { echo 'Upstream application layout changed' >&2; exit 1; }
 tar -xf reference.tar -C package-reference

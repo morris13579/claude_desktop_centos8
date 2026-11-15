@@ -16,7 +16,7 @@ version=$(dpkg-deb -f "$DEB_FILE" Version)
 sha256sum "$DEB_FILE"
 echo 'Installing runtime, SDK and Electron BaseApp from Flathub.'
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install --user --noninteractive --assumeyes flathub \
+flatpak install --user --noninteractive --assumeyes --no-related flathub \
   org.freedesktop.Platform/x86_64/26.08 \
   org.freedesktop.Sdk/x86_64/26.08 \
   org.electronjs.Electron2.BaseApp/x86_64/26.08
