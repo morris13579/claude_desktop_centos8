@@ -20,6 +20,7 @@
 
 - Desktop 封裝：`claude-desktop.tar.gpg.part00` 至 `claude-desktop.tar.gpg.part07`，共 8 個分割檔。
 - 對話元件：`claude-code-2.1.325.zst.gpg.part00` 至 `claude-code-2.1.325.zst.gpg.part02`，共 3 個分割檔。
+- 修正版啟動設定腳本：[open3p.sh](https://raw.githubusercontent.com/morris13579/claude_desktop_centos8/main/open3p.sh)，下載時另存為 `open3p-fixed.sh`，與分割檔放在同一目錄。
 
 直接下載網址的格式如下，分別替換最後兩位數字：
 
@@ -46,10 +47,13 @@ sha256sum claude-desktop.tar.gpg
 ```bash
 gpg --output claude-desktop.tar --decrypt claude-desktop.tar.gpg
 tar -xf claude-desktop.tar
+cp open3p-fixed.sh open3p.sh
 bash install-and-open.sh
 ```
 
 GPG 會互動要求密碼。腳本使用 `flatpak install --user --noninteractive --no-deps` 安裝本封裝附帶的 runtime 和應用，並呼叫 `open3p.sh` 建立第三方模式設定。若使用者已有 `Claude-3p/configLibrary` 或 `claude_desktop_config.json`，腳本會停止以免覆寫，請先檢查和備份現有設定。
+
+**必須先替換腳本：**目前加密封裝內附的是舊版 `open3p.sh`，其建立的 `_meta.json` 缺少 `entries`，會造成 Gateway 設定視窗顯示 `Couldn't load configuration`。GitHub 上的獨立 `open3p.sh` 已補上正確清單；上面的 `cp` 用修正版覆蓋解壓出來的舊版，不會修改既有使用者設定。此更新不會自動修改已下載的加密封裝。
 
 初始設定的 `http://127.0.0.1:18777`、`local-test-only` 和模型名稱只是**佔位測試值**。看到無法連線是預期的，並不代表模型已設定。一般模式會嘗試載入外部服務，在完全離線環境可能出現白畫面；測試使用的是第三方模式。
 
