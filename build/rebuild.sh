@@ -32,7 +32,12 @@ sdk=org.freedesktop.Sdk/x86_64/26.08
 devel=true
 META
 flatpak build-finish --command=claude-desktop --share=ipc --share=network --socket=fallback-x11 --socket=wayland --socket=pulseaudio --device=dri --talk-name=org.freedesktop.Notifications --talk-name=org.kde.StatusNotifierWatcher --talk-name=org.freedesktop.secrets claude-build
-flatpak build-export app-repo claude-build stable
+if [ "${FLATPAK_EXPORT_UNSANDBOXED:-0}" = 1 ]; then
+  # The icon validator runs within Docker when nested bubblewrap is unavailable.
+  flatpak build-export --disable-sandbox app-repo claude-build stable
+else
+  flatpak build-export app-repo claude-build stable
+fi
 flatpak build-bundle app-repo claude-desktop-offline.flatpak com.anthropic.ClaudeDesktop stable
 flatpak build-bundle --runtime "$OSTREE_REPO" freedesktop-platform-26.08.flatpak org.freedesktop.Platform 26.08
 sha256sum claude-desktop-offline.flatpak freedesktop-platform-26.08.flatpak

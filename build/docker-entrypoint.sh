@@ -22,6 +22,7 @@ flatpak install --user --noninteractive --assumeyes --no-related flathub \
   org.electronjs.Electron2.BaseApp/x86_64/26.08
 cp /opt/claude-build/reference.tar .
 export OSTREE_REPO="$HOME/.local/share/flatpak/repo"
+export FLATPAK_EXPORT_UNSANDBOXED=1
 if ostree --repo="$OSTREE_REPO" rev-parse runtime/org.electronjs.Electron2.BaseApp/x86_64/26.08 >/dev/null 2>&1; then
   export BASE_REF=runtime/org.electronjs.Electron2.BaseApp/x86_64/26.08
 else
