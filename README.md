@@ -142,23 +142,24 @@ Desktop 對模型路由名稱有驗證，不符合其規則的名稱可能會被
 
 Claude Code 的終端機對話通常存放在 `~/.claude/projects/`；Desktop 的側欄則使用自己的本機索引。選取工作資料夾可讓 Desktop 使用該資料夾，但不保證舊對話會自動出現在側欄。這個版本的 Desktop 提供 **Help → Troubleshooting → Import Claude Code CLI Sessions** 匯入功能。
 
-### 讓 Flatpak 唯讀舊對話
+### 開放家目錄與舊對話目錄
 
-Flatpak 預設無法看見主機上的 `~/.claude/projects`。若要匯入同一個 Linux 使用者的歷史，先關閉 Desktop，並以該使用者執行：
+本次測試使用同一個 Linux 帳號，並讓 Desktop 可讀寫該帳號的家目錄及 Claude Code 對話目錄。先退出 Desktop，再以該使用者執行：
 
 ```bash
-flatpak override --user \
-  --filesystem="$HOME/.claude/projects:ro" \
-  com.anthropic.ClaudeDesktop
+flatpak override --user --filesystem=home --filesystem="$HOME/.claude/projects:rw" com.anthropic.ClaudeDesktop
+flatpak override --user --show com.anthropic.ClaudeDesktop
 ```
 
-`ro` 表示唯讀；這只開放對話目錄，沒有開放整個家目錄。重新開啟 Desktop 後，可使用下列命令檢查沙箱能否列出該目錄：
+這會授予 Desktop 廣泛的檔案讀寫權限，包括可能含有敏感資料的家目錄檔案；Linux 原有的檔案權限及 Flatpak 特殊路徑限制仍然適用。明確指定 `.claude/projects:rw`，也可覆蓋先前針對該目錄設定的唯讀或拒絕規則。此設定不會自動開放其他使用者的家目錄。
+
+重新開啟 Desktop 後，可先檢查沙箱能否列出原始對話目錄：
 
 ```bash
 flatpak run --command=ls com.anthropic.ClaudeDesktop "$HOME/.claude/projects"
 ```
 
-這只讓 Desktop 能讀到檔案，**不等於已經匯入成功**。唯讀也可能影響接續舊對話或寫回原始紀錄；須實際驗證。此設定不包含其他使用者的帳號或目錄。
+能列出檔案不代表對話已匯入，也不保證每個舊工作階段都能接續。若不需要家目錄的廣泛存取，請自行評估只開放所需目錄；本次成功結果是以上述設定驗證，未驗證最小權限組合。
 
 ### 備份索引並使用內建匯入器
 
@@ -177,17 +178,15 @@ fi
 
 Desktop 的 **Trust this workspace** 提示表示程式可能讀取、寫入或執行該資料夾的檔案，不只是讀取對話；只信任你認可的工作目錄，不要為了匯入而直接信任整個家目錄或其他使用者的專案。
 
-本次在離線機器驗證：唯讀掛載後沙箱已可列出原始對話目錄，但內建匯入器仍顯示 **No sessions to import**，並提示只處理受信任資料夾。因此目前尚未驗證批次匯入或全部對話能正常顯示；Flatpak 文件選擇器提供的路徑也可能與舊對話記錄的原始路徑不同。若仍無法匯入，保留原始對話和索引備份，再逐一確認來源工作目錄及信任狀態；不要直接覆蓋或修改原始 JSONL。
+本次在離線機器驗證：開放上述權限並重新啟動後，匯入器找到並匯入 **23 個工作階段**；已實際開啟其中一個，確認舊對話內容與執行紀錄可顯示。比對當時 `~/.claude/projects` 下各專案目錄的主要 JSONL 檔案，40 個檔案中有 23 個對應到 Desktop 索引，另外 17 個未對應。尚未確認這 17 個是否都是可匯入的完整對話，也沒有確定它們被略過的原因；不應將讀取成功或匯入數量視為全部對話均已匯入。不同環境和版本的結果可能不同。
 
-若不再需要 Desktop 讀取舊對話，可對該路徑設定拒絕存取，並重新啟動 Desktop：
+若要撤銷本節設定的家目錄與對話目錄存取，先退出 Desktop，再執行：
 
 ```bash
-flatpak override --user \
-  --nofilesystem="$HOME/.claude/projects" \
-  com.anthropic.ClaudeDesktop
+flatpak override --user --nofilesystem=home --nofilesystem="$HOME/.claude/projects" com.anthropic.ClaudeDesktop
 ```
 
-此命令會在使用者覆寫設定中加入該路徑的拒絕規則，而不是刪除原始對話。它也可能影響已匯入對話的讀取或接續，應先確認備份及需要。
+這會加入拒絕存取規則，不會刪除原始對話；也可能影響其他工作目錄、已匯入對話的讀取或接續。若原先自行設定過其他目錄權限，請用 `flatpak override --user --show com.anthropic.ClaudeDesktop` 檢查，並依需求調整。
 
 ## 7. 在可上網機器重新製作 Flatpak
 
