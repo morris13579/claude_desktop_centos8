@@ -202,36 +202,33 @@ flatpak override --user --nofilesystem=home --nofilesystem="$HOME/.claude/projec
 
 現有封裝是將 **官方預先編譯的 Debian 應用樹重新封裝**，不是從 Claude Desktop 原始碼編譯。Electron2 BaseApp 已提供 zypak；應用使用 zypak wrapper 搭配 Flatpak sandbox。不要把 Desktop 預設以 root 執行，也不要為了排障隨意關閉 sandbox。
 
-### Docker 建置（實驗性，尚未實機驗證）
+### Docker 一次性建置（實驗性，尚未完整驗證）
 
-專案提供 `build/Dockerfile`，將 Flatpak、OSTree 和重新封裝步驟放到 Docker 建置環境。Docker 在**可上網的建置機**執行；離線的 CentOS 目標機仍只需要 Flatpak，不需要 Docker。此流程尚未在乾淨 Docker 環境完整跑過，也尚未在目標機測試其產物；請先用測試機驗證，不要取代目前可用的安裝。
+在可上網的 x86_64 Docker 主機建置及執行下列容器，它會從 Anthropic APT 來源自動下載當時的最新版 Desktop，取得 Desktop 內記載的 Linux Claude Code 元件並核對雜湊，使用 Flatpak 26.08 執行環境重新封裝。產物寫入 `output` 的版本與時間子目錄，容器結束後不需要持續運行。目標機不需要 Docker，但需要 Flatpak 和 zstd。
 
-在取得完整專案檔案、可使用 Linux 容器的 Docker 主機上，於儲存庫根目錄建立 `input`、`output` 目錄，將官方 Debian 套件放成 `input/claude-desktop.deb`。目前配方是依 5.11492.5、x86_64 和 runtime 26.08 設計；首次請使用該版本並確認 SHA-256 為下方命令的值。Linux 主機執行：
+此流程尚未在乾淨 Docker 環境完成端對端驗證。上游版本、應用結構、內嵌清單或 runtime 需求可能變更；建置成功亦不保證新版能在 CentOS 8 啟動。請先在測試機實際驗證，保留原版與使用者資料。新版如果改變套件格式或目錄，流程會停止並需要調整。
+
+取得完整專案檔案後，在儲存庫根目錄執行（Linux）：
 
 ```bash
-mkdir -p input output
-# 將官方 5.11492.5 amd64 .deb 複製為 input/claude-desktop.deb
+mkdir -p output
 docker build --platform linux/amd64 -f build/Dockerfile -t claude-desktop-builder .
 docker run --rm --platform linux/amd64 \
-  -e DEB_SHA256=b96208b207e450b740f7dbe304f6077fed80e7f3d37ddd545991c4e8201564cf \
-  --mount "type=bind,src=$(pwd)/input,dst=/input,readonly" \
   --mount "type=bind,src=$(pwd)/output,dst=/output" \
   claude-desktop-builder
 ```
 
-Windows PowerShell 可在同目錄使用對應的掛載方式：
+Windows PowerShell：
 
 ```powershell
-New-Item -ItemType Directory -Force input, output | Out-Null
+New-Item -ItemType Directory -Force output | Out-Null
 docker build --platform linux/amd64 -f build/Dockerfile -t claude-desktop-builder .
 docker run --rm --platform linux/amd64 `
-  -e DEB_SHA256=b96208b207e450b740f7dbe304f6077fed80e7f3d37ddd545991c4e8201564cf `
-  --mount "type=bind,src=$((Resolve-Path input).Path),dst=/input,readonly" `
   --mount "type=bind,src=$((Resolve-Path output).Path),dst=/output" `
   claude-desktop-builder
 ```
 
-腳本會檢查輸入 SHA-256，從 Flathub 取得 26.08 Platform、SDK 和 Electron BaseApp，將兩個 Flatpak、包含修正版 `open3p.sh` 的未加密 tar，以及 `SHA256SUMS` 寫入 `output`；若同名產物已存在會停止。單獨 Flatpak 與 tar 是未加密的，若需傳送到公開位置，需另行加密。**產物不包含 Claude Code 對話元件或 Flatpak 系統 RPM**，仍需依第 1、4 節準備。建置依賴會隨上游更新，並未固定 commit，輸出不保證與原封裝相同；新版 Desktop 也可能需要調整配方、runtime 和 Claude Code 元件。這個流程是新安裝封裝，尚未提供保留現有設定的更新程序。
+產物包含 `claude-desktop-offline.tar`、`SHA256SUMS` 和 `BUILD-INFO.txt`。tar 包含 Desktop、runtime、對應 Claude Code 元件、修正版啟動設定及全新安裝腳本；不包含系統 Flatpak RPM。檢查雜湊後將 tar 傳到目標機、解壓並執行 `bash install-and-open.sh`。產物未加密，如需放在公開位置必須另行加密。此安裝腳本會拒絕覆寫既有第三方設定，尚不是現有安裝的升級程序。
 
 ### 原始手動建置方式
 

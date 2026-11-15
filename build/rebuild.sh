@@ -3,14 +3,16 @@
 set -euo pipefail
 : "${OSTREE_REPO:?Set OSTREE_REPO to the Flatpak OSTree repository}"
 : "${BASE_REF:=runtime/org.electronjs.Electron2.BaseApp/x86_64/26.08}"
-[ -f claude-desktop_5.11492.5_amd64.deb ] || { echo "Missing Debian package" >&2; exit 1; }
+: "${DEB_FILE:=claude-desktop_5.11492.5_amd64.deb}"
+[ -f "$DEB_FILE" ] || { echo "Missing Debian package: $DEB_FILE" >&2; exit 1; }
 [ -f reference.tar ] || { echo "Missing reference.tar" >&2; exit 1; }
 for dir in base-checkout unpacked claude-build app-repo package-reference; do
   [ ! -e "$dir" ] || { echo "Refusing to overwrite $dir; use a fresh directory" >&2; exit 1; }
 done
 ostree --repo="$OSTREE_REPO" checkout --user-mode "$BASE_REF" base-checkout
 mkdir -p unpacked package-reference claude-build/files claude-build/export
-(cd unpacked; ar x ../claude-desktop_5.11492.5_amd64.deb data.tar.xz; tar -xf data.tar.xz)
+dpkg-deb -x "$DEB_FILE" unpacked
+[ -f unpacked/usr/lib/claude-desktop/resources/app.asar ] || { echo 'Upstream application layout changed' >&2; exit 1; }
 tar -xf reference.tar -C package-reference
 cp -a base-checkout/files/. claude-build/files/
 mkdir -p claude-build/files/lib/claude-desktop
