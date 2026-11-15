@@ -116,6 +116,10 @@ fi
 
 ## 5. 連接內網 Gateway
 
+第 3 節的修正版腳本建立的 Gateway 資料只是佔位值。先開啟 Desktop 的第三方推論設定視窗，在 **Connection → Gateway** 填入實際的 Gateway base URL、API 金鑰及 Gateway auth scheme，並依服務設定可用的模型名稱；按 **Apply Changes** 儲存，必要時重新啟動 Desktop。可使用介面中的 **Test connection** 輔助檢查，再建立對話確認實際能收到回覆。不同 Gateway 所需的網址、認證方式及模型名稱不一定相同。
+
+如果介面提示金鑰未加密儲存在電腦上，代表它未受 Desktop 的安全儲存機制保護；請依本機安全需求處理。不要公開設定檔、金鑰或包含憑證的日誌。
+
 第三方模式的使用者設定位於：
 
 ```text
@@ -140,7 +144,9 @@ Desktop 對模型路由名稱有驗證，不符合其規則的名稱可能會被
 }
 ```
 
-模型 ID 和認證方式必須依實際 Gateway 修改；在既有檔案中修改時應保留其他必要欄位。修改設定後重啟 Desktop。Desktop 的設定頁曾出現 `Couldn’t load configuration`；目前尚未確認其直接原因。離線日誌中也可能出現向 Anthropic 外部服務請求逾時，這些紀錄本身不能證明內網推論已失敗。
+模型 ID 和認證方式必須依實際 Gateway 修改；如果手動修改既有檔案，應先關閉 Desktop 並備份，保留其他必要欄位，修改後重啟 Desktop。離線日誌中也可能出現向 Anthropic 外部服務請求逾時，這些紀錄本身不能證明內網推論已失敗。
+
+若舊版安裝後的設定頁出現 `Couldn't load configuration`，請檢查 `_meta.json`：舊版腳本只寫入 `appliedId`，缺少 `entries`。本次在離線機器備份索引後，補上指向既有設定 ID 的 `entries`，按 Retry 已可載入設定介面。修正版 `open3p.sh` 僅用於全新初始化；它會拒絕覆寫現有設定，不要直接執行它來修復已設定的電腦。
 
 ## 6. 匯入既有 Claude Code 對話
 
