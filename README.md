@@ -202,11 +202,11 @@ flatpak override --user --nofilesystem=home --nofilesystem="$HOME/.claude/projec
 
 現有封裝是將 **官方預先編譯的 Debian 應用樹重新封裝**，不是從 Claude Desktop 原始碼編譯。Electron2 BaseApp 已提供 zypak；應用使用 zypak wrapper 搭配 Flatpak sandbox。不要把 Desktop 預設以 root 執行，也不要為了排障隨意關閉 sandbox。
 
-### Docker 一次性建置（實驗性，尚未完整驗證）
+### Docker 一次性建置（建置已測試，目標端待驗證）
 
 在可上網的 x86_64 Docker 主機建置及執行下列容器，它會從 Anthropic APT 來源自動下載當時的最新版 Desktop，取得 Desktop 內記載的 Linux Claude Code 元件並核對雜湊，使用 Flatpak 26.08 執行環境重新封裝。產物寫入 `output` 的版本與時間子目錄，容器結束後不需要持續運行。目標機不需要 Docker，但需要 Flatpak 和 zstd。
 
-此流程尚未在乾淨 Docker 環境完成端對端驗證。上游版本、應用結構、內嵌清單或 runtime 需求可能變更；建置成功亦不保證新版能在 CentOS 8 啟動。請先在測試機實際驗證，保留原版與使用者資料。新版如果改變套件格式或目錄，流程會停止並需要調整。
+已在 Docker 測試主機完成一次建置：自動下載 Desktop 5.11492.5、取得相符的 Claude Code 2.1.325 並通過雜湊校驗，產出 tar 後容器以 exit code 0 結束。**這次 Docker 產物尚未在 CentOS 目標機實際安裝或開啟。**上游版本、應用結構、內嵌清單或 runtime 需求可能變更；建置成功不保證新版能在 CentOS 8 啟動。請先在測試機驗證，保留原版與使用者資料。新版如果改變套件格式或目錄，流程會停止並需要調整。
 
 取得完整專案檔案後，在儲存庫根目錄執行（Linux）：
 
@@ -229,6 +229,8 @@ docker run --rm --platform linux/amd64 `
 ```
 
 產物包含 `claude-desktop-offline.tar`、`SHA256SUMS` 和 `BUILD-INFO.txt`。tar 包含 Desktop、runtime、對應 Claude Code 元件、修正版啟動設定及全新安裝腳本；不包含系統 Flatpak RPM。檢查雜湊後將 tar 傳到目標機、解壓並執行 `bash install-and-open.sh`。產物未加密，如需放在公開位置必須另行加密。此安裝腳本會拒絕覆寫既有第三方設定，尚不是現有安裝的升級程序。
+
+如果使用 Portainer，建置容器時可將一個專用 volume 掛到 `/output`，並將 restart policy 設為 `None`；容器結束後產物仍保留在 volume。可從 Docker 主機用 `docker cp <已停止的容器名稱>:/output/<產物目錄> ./` 複製出來。重新啟動該容器會再次查詢並封裝當時可取得的最新版；請確認新的執行以 exit code 0 結束。容器內執行的 `flatpak build-export --disable-sandbox` 只關閉容器內圖示驗證程序的巢狀沙箱，並不改變產物執行時的 Flatpak 沙箱。
 
 ### 原始手動建置方式
 
