@@ -202,6 +202,39 @@ flatpak override --user --nofilesystem=home --nofilesystem="$HOME/.claude/projec
 
 現有封裝是將 **官方預先編譯的 Debian 應用樹重新封裝**，不是從 Claude Desktop 原始碼編譯。Electron2 BaseApp 已提供 zypak；應用使用 zypak wrapper 搭配 Flatpak sandbox。不要把 Desktop 預設以 root 執行，也不要為了排障隨意關閉 sandbox。
 
+### Docker 建置（實驗性，尚未實機驗證）
+
+專案提供 `build/Dockerfile`，將 Flatpak、OSTree 和重新封裝步驟放到 Docker 建置環境。Docker 在**可上網的建置機**執行；離線的 CentOS 目標機仍只需要 Flatpak，不需要 Docker。此流程尚未在乾淨 Docker 環境完整跑過，也尚未在目標機測試其產物；請先用測試機驗證，不要取代目前可用的安裝。
+
+在取得完整專案檔案、可使用 Linux 容器的 Docker 主機上，於儲存庫根目錄建立 `input`、`output` 目錄，將官方 Debian 套件放成 `input/claude-desktop.deb`。目前配方是依 5.11492.5、x86_64 和 runtime 26.08 設計；首次請使用該版本並確認 SHA-256 為下方命令的值。Linux 主機執行：
+
+```bash
+mkdir -p input output
+# 將官方 5.11492.5 amd64 .deb 複製為 input/claude-desktop.deb
+docker build --platform linux/amd64 -f build/Dockerfile -t claude-desktop-builder .
+docker run --rm --platform linux/amd64 \
+  -e DEB_SHA256=b96208b207e450b740f7dbe304f6077fed80e7f3d37ddd545991c4e8201564cf \
+  --mount "type=bind,src=$(pwd)/input,dst=/input,readonly" \
+  --mount "type=bind,src=$(pwd)/output,dst=/output" \
+  claude-desktop-builder
+```
+
+Windows PowerShell 可在同目錄使用對應的掛載方式：
+
+```powershell
+New-Item -ItemType Directory -Force input, output | Out-Null
+docker build --platform linux/amd64 -f build/Dockerfile -t claude-desktop-builder .
+docker run --rm --platform linux/amd64 `
+  -e DEB_SHA256=b96208b207e450b740f7dbe304f6077fed80e7f3d37ddd545991c4e8201564cf `
+  --mount "type=bind,src=$((Resolve-Path input).Path),dst=/input,readonly" `
+  --mount "type=bind,src=$((Resolve-Path output).Path),dst=/output" `
+  claude-desktop-builder
+```
+
+腳本會檢查輸入 SHA-256，從 Flathub 取得 26.08 Platform、SDK 和 Electron BaseApp，將兩個 Flatpak、包含修正版 `open3p.sh` 的未加密 tar，以及 `SHA256SUMS` 寫入 `output`；若同名產物已存在會停止。單獨 Flatpak 與 tar 是未加密的，若需傳送到公開位置，需另行加密。**產物不包含 Claude Code 對話元件或 Flatpak 系統 RPM**，仍需依第 1、4 節準備。建置依賴會隨上游更新，並未固定 commit，輸出不保證與原封裝相同；新版 Desktop 也可能需要調整配方、runtime 和 Claude Code 元件。這個流程是新安裝封裝，尚未提供保留現有設定的更新程序。
+
+### 原始手動建置方式
+
 準備：
 
 1. 可上網、`x86_64` 的 Linux 建置環境，安裝 `flatpak`、`ostree`、`ar`、`tar`、`sed` 及標準 coreutils。

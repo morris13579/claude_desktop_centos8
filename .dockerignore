@@ -1,0 +1,7 @@
+*
+!build/
+!build/rebuild.sh
+!build/reference.tar
+!build/docker-entrypoint.sh
+!build/install-and-open.sh
+!open3p.sh
